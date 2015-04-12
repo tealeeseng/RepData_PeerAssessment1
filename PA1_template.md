@@ -14,9 +14,9 @@ Process/transform the data (if necessary) into a format suitable for your analys
 
 ## What is mean total number of steps taken per day?
 
-For this part of the assignment, you can ignore the missing values in the dataset.
+**For this part of the assignment, you can ignore the missing values in the dataset.**
 
-1. Calculate the total number of steps taken per day  
+**1. Calculate the total number of steps taken per day**  
 Code:
 
 ```r
@@ -86,21 +86,16 @@ sumStepsByDate
 ## 53 2012-11-29  7047
 ```
 
-2. If you do not understand the difference between a histogram and a barplot, research the difference between them. Make a histogram of the total number of steps taken each day  
+**2. If you do not understand the difference between a histogram and a barplot, research the difference between them. Make a histogram of the total number of steps taken each day**  
 Code and plot:
 
 ```r
-library(ggplot2)
-qplot(steps, data=sumStepsByDate)
-```
-
-```
-## stat_bin: binwidth defaulted to range/30. Use 'binwidth = x' to adjust this.
+hist(x = sumStepsByDate$steps)
 ```
 
 ![](PA1_template_files/figure-html/unnamed-chunk-4-1.png) 
 
-3. Calculate and report the mean and median of the total number of steps taken per day  
+**3. Calculate and report the mean and median of the total number of steps taken per day**  
 Code:
 
 ```r
@@ -112,7 +107,7 @@ mean and median of the total number of steps taken per day are 1.0766189\times 1
 
 
 ## What is the average daily activity pattern?  
-1. Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+**1. Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)**  
 
 Code and plot:
 
@@ -123,16 +118,108 @@ plot(y=meanStepsByinterval$steps, x=meanStepsByinterval$interval, type="l", ylab
 
 ![](PA1_template_files/figure-html/unnamed-chunk-6-1.png) 
 
-2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+**2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?**  
 Code:
 
 ```r
 maxStep<-meanStepsByinterval[ (meanStepsByinterval$steps==max(meanStepsByinterval$steps)),]
 ```
-At 835, the maximum average step is 206.1698113
+At interval 835, the maximum average step is 206.1698113
 
 ## Imputing missing values
 
+**Note that there are a number of days/intervals where there are missing values (coded as NA). The presence of missing days may introduce bias into some calculations or summaries of the data.
 
+1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)**  
+Code: 
+
+```r
+totalMissing <- sum(is.na(activity))
+```
+About 2304 rows has missing values.
+
+**2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.**  
+
+We will use the mean of the 5 minute interval to impute missing value.
+
+
+**3. Create a new dataset that is equal to the original dataset but with the missing data filled in.**  
+
+```r
+activityCleaned <- merge(x=activity, y=meanStepsByinterval, by.x="interval", by.y="interval", all.x=TRUE)
+activityCleaned$steps.x[is.na(activityCleaned$steps.x)] <-activityCleaned$steps.y
+```
+
+```
+## Warning in activityCleaned$steps.x[is.na(activityCleaned$steps.x)] <-
+## activityCleaned$steps.y: number of items to replace is not a multiple of
+## replacement length
+```
+
+```r
+sum(is.na(activityCleaned))
+```
+
+```
+## [1] 0
+```
+
+```r
+names(activityCleaned)[2]='steps'
+```
+
+**4. Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?**  
+
+Cleaned data has more counts on steps less than 5000.
+code and plot:
+
+```r
+sumStepsCleanedByDate <-aggregate(steps ~ date, data=activityCleaned, sum)
+par(mfrow=(c(1,2)))
+hist(x = sumStepsByDate$steps, main = "Raw data", xlab="Total steps by date")
+hist(x = sumStepsCleanedByDate$steps, main = "Cleaned data" ,xlab="Total steps by date")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-10-1.png) 
+
+Code for means and median comparison:
+
+```r
+means<-mean(sumStepsByDate$steps)
+medians<-median(sumStepsByDate$steps)
+
+
+meansCleaned<-mean(sumStepsCleanedByDate$steps)
+mediansCleaned<-median(sumStepsCleanedByDate$steps)
+```
+
+For mean, cleaned data has 9371.4370554 VS 1.0766189\times 10^{4}
+For median, cleaned data has 1.0395\times 10^{4} VS 10765
 
 ## Are there differences in activity patterns between weekdays and weekends?
+**For this part the weekdays() function may be of some help here. Use the dataset with the filled-in missing values for this part.  **
+
+**1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.**  
+Code:
+
+```r
+activityCleaned$days<- weekdays(strptime(as.character(activityCleaned$date), "%Y-%m-%d"))
+activityCleaned$weekend<-'weekday'
+activityCleaned$weekend[activityCleaned$days %in% c('Saturday','Sunday')]<-'weekend'
+activityCleaned$weekend <-factor(activityCleaned$weekend)
+```
+
+**2. Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.**  
+
+Code and plot:
+
+```r
+meanStepsCleanedByinterval<-aggregate(steps ~ interval+weekend, data=activityCleaned, mean)
+
+library(lattice)
+
+xyplot(steps ~ interval | weekend,data=meanStepsCleanedByinterval, layout=c(1,2), type = "l", , main="Mean Steps of a given interval of Cleaned dataset")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-13-1.png) 
+
